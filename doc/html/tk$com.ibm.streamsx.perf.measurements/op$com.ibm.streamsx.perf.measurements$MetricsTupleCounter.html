@@ -1,0 +1,433 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="copyright" content="(C) Copyright 2005"/>
+<meta name="DC.rights.owner" content="(C) Copyright 2005"/>
+<meta name="DC.Type" content="reference"/>
+<meta name="DC.Title" content="Operator MetricsTupleCounter"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="spldoc_operator"/>
+<link rel="stylesheet" type="text/css" href="../../html/commonltr.css"/>
+<link rel="stylesheet" type="text/css" href="../../html/spldoc.css"/>
+<title>Operator MetricsTupleCounter</title>
+</head>
+<body id="spldoc_operator">
+
+
+<h1 class="title topictitle1">Operator <tt class="ph tt">MetricsTupleCounter</tt></h1>
+
+<div class="body refbody">
+<div class="section">
+<p class="p">
+<a class="xref" href="../toolkits/toolkits.html">Toolkits</a> &gt; <a class="xref" href="tk$com.ibm.streamsx.perf.measurements.html">com.ibm.streamsx.perf.measurements 1.0.0</a> &gt; <a class="xref" href="ns$com.ibm.streamsx.perf.measurements.html">com.ibm.streamsx.perf.measurements</a> &gt; MetricsTupleCounter</p>
+
+</div>
+
+<div class="section splprimop">
+  <embed class="image" src="../../image/tk$com.ibm.streamsx.perf.measurements/op$com.ibm.streamsx.perf.measurements$MetricsTupleCounter.svg" width="672" height="112"/>
+</div>
+
+<div class="section">
+
+<p class="p">Brief description of the operator The <tt class="ph tt">MetricsTupleCounter</tt> operator will report metrics data about tuple rates flowing through input or output ports.
+</p>
+
+<p class="p">The operator can look at tuple rates in operators within the same job as the MetricsTupleCounter operator is running in or it can look at other jobs.
+</p>
+
+<p class="p">The operator will measure for a configurable number of intervals  that are based on tuple counts.  The size of the tuple counts used to measure the intervals is configurable. 
+</p>
+
+<p class="p">Since <tt class="ph tt">MetricsTupleCounter</tt> relies on metrics data for its information, it will not work in a standalone mode application where metrics are not available. 
+</p>
+
+<p class="p">The <tt class="ph tt">MetricsTupleCounterHelper</tt> operator can be used in conjunction with the <tt class="ph tt">MetricsTupleCounter</tt> operator for easier output formatting.  The instances of these two operators should be paired in the same Processing Element (PE).
+</p>
+
+  <dl class="dl"><dt class="dt dlterm"><a class="xref" href="op$com.ibm.streamsx.perf.measurements$MetricsTupleCounter$1.html">Examples</a>
+</dt>
+<dd class="dd">    composite Main {       graph // Measure the tuples going through the myalias1 output stream
+stream &lt;float64 duration, uint64 tuples, float64 rate&gt; metricsx = MetricsTupleCounter() {
+  param
+    measurementType : outputPort;        
+    streamName    : "myalias1";              
+    tuplesPerMeasurementInterval:     1000000000l;
+    measurementIntervals : 3l;  
+    metricCollectionInterval:  3.5;
+  config placement: partitionColocation("B");      
+}
+    
+stream &lt;int64 interval, float64 duration1, uint64 count1, float64 rate1&gt; formattedMetrics = MetricsTupleCounterHelper(metricsx) {
+  output formattedMetrics:
+    interval = Interval(),
+    duration1 = Duration(),
+    count1 = Count(),
+    rate1 = Rate();
+  config placement: partitionColocation("B");    
+}
+    
+() as measureDump = FileSink(formattedMetrics) {
+  param
+    file : "metrics.csv";
+    format: csv;   
+    flush:  1u;
+config placement: partitionColocation("B");
+      }       stream&lt;uint64 x&gt; beat as myalias1 = Beacon() { param
+  period:  0.1;
+output beat:
+  x = IterationCount();
+config placement: partitionColocation("A");
+      }       stream&lt;beat&gt; processed = Functor(beat) { logic state: {
+  mutable uint64 cnt = 0ul;
+ }
+ param
+   filter : cnt++ &lt;= 299ul;
+config placement: partitionColocation("A");
+      }       () as dump= FileSink(processed) {     param
+  file : "output.csv";
+  format: csv;    
+  flush : 1u;
+config placement: partitionColocation("A");
+      }     }
+</dd>
+</dl>
+
+</div>
+
+<div class="section"><h2 class="title sectiontitle splhead-1">Summary</h2>
+
+<dl class="dl" compact="compact">
+ 
+  <dt class="dt dlterm">Ports</dt>
+
+  <dd class="dd">This operator has 0 input port and 1 output port.</dd>
+
+ 
+ 
+  <dt class="dt dlterm">Windowing</dt>
+
+  <dd class="dd">This operator does not accept any windowing configurations.</dd>
+
+ 
+ 
+  <dt class="dt dlterm">Parameters</dt>
+
+  <dd class="dd">This operator supports 6 parameters. (<tt class="ph tt">measurementType, streamName, tuplesPerMeasurementInterval, measurementIntervals, metricCollectionInterval, jobID</tt>)
+</dd>
+
+ 
+ 
+  <dt class="dt dlterm">Metrics</dt>
+
+  <dd class="dd">This operator does not report any metrics.</dd>
+
+ 
+</dl>
+</div>
+
+<div class="section"><h2 class="title sectiontitle splhead-1">Properties</h2>
+
+<dl class="dl" compact="compact">
+ 
+  <dt class="dt dlterm">Implementation</dt>
+
+  <dd class="dd">Java</dd>
+
+ 
+</dl>
+
+</div>
+
+<div class="section">
+<p class="p splhead-1"><strong class="ph b"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__output_port_set">Output Ports</a></strong></p>
+<dl class="dl">
+  
+     <dt class="dt dlterm">Assignments</dt>
+
+       <dd class="dd">Java operators do not support output assignments.
+       </dd>
+
+  
+</dl>
+
+<dl class="dl">
+  
+   <dt class="dt dlterm">Ports (0)</dt>
+
+   <dd class="dd">
+
+<p class="p">The <tt class="ph tt">MetricsTupleCounter</tt> operator has one required output port. The streams schema must follow a required format where there are three attribues of float64 duration, uint64 tuples, float64 rate. The attribute can be any names, but have these types.
+</p>
+
+<p class="p"/>
+
+   <dl class="dl">
+    
+      <dt class="dt dlterm">Properties</dt>
+
+      <dd class="dd">
+   <ul class="sl simple">
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__output_port_set__optional">Optional</a>: false
+     </li>
+
+   </ul>
+
+   <ul class="sl simple">
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__output_port_set__windowpunctuationoutputmode">WindowPunctuationOutputMode</a>: Generating
+     </li>
+
+   </ul>
+
+      </dd>
+
+    
+   </dl>
+
+   <p class="p"/>
+
+   </dd>
+
+  
+</dl>
+
+</div>
+
+<div class="section">
+<p class="p splhead-1"><strong class="ph b"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters">Parameters</a></strong></p>
+This operator supports 6 parameters.<dl class="dl">
+
+<dt class="dt dlterm" id="spldoc_operator__parameter_measurementType"><tt class="ph tt">measurementType</tt></dt>
+
+<dd class="dd">
+<p class="p">Indicates whether we are going to measure an input port or an output port of an operator. Valid values are <tt class="ph tt">outputPort</tt> and <tt class="ph tt">inputPort</tt>.
+</p>
+<dl class="dl">
+
+ <dt class="dt dlterm">Properties </dt>
+
+ <dd class="dd">
+  <ul class="sl simple">
+  <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__type">Type</a>: com.ibm.streamsx.perf.measurements.MetricsTupleCounter.Type
+ (<tt class="ph tt">outputPort, inputPort</tt>)  </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__cardinality">Cardinality</a>: 1
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__optional">Optional</a>: false
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__expressionmode">ExpressionMode</a>: CustomLiteral
+     </li>
+
+  </ul>
+
+ </dd>
+
+
+</dl>
+
+</dd>
+
+
+
+<dt class="dt dlterm" id="spldoc_operator__parameter_streamName"><tt class="ph tt">streamName</tt></dt>
+
+<dd class="dd">
+<p class="p">Specifies the name of the stream that are to be measured. If the stream name has an alias, the alias should be used. Otherwise use the name of the stream.
+</p>
+<dl class="dl">
+
+ <dt class="dt dlterm">Properties </dt>
+
+ <dd class="dd">
+  <ul class="sl simple">
+  <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__type">Type</a>: rstring
+  </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__cardinality">Cardinality</a>: 1
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__optional">Optional</a>: false
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__expressionmode">ExpressionMode</a>: AttributeFree
+     </li>
+
+  </ul>
+
+ </dd>
+
+
+</dl>
+
+</dd>
+
+
+
+<dt class="dt dlterm" id="spldoc_operator__parameter_tuplesPerMeasurementInterval"><tt class="ph tt">tuplesPerMeasurementInterval</tt></dt>
+
+<dd class="dd">
+<p class="p">Number of tuples that define a measurement inteval.
+</p>
+<dl class="dl">
+
+ <dt class="dt dlterm">Properties </dt>
+
+ <dd class="dd">
+  <ul class="sl simple">
+  <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__type">Type</a>: int64
+  </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__cardinality">Cardinality</a>: 1
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__optional">Optional</a>: false
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__expressionmode">ExpressionMode</a>: AttributeFree
+     </li>
+
+  </ul>
+
+ </dd>
+
+
+</dl>
+
+</dd>
+
+
+
+<dt class="dt dlterm" id="spldoc_operator__parameter_measurementIntervals"><tt class="ph tt">measurementIntervals</tt></dt>
+
+<dd class="dd">
+<p class="p">Number of intervals to measure.  Default is one.
+</p>
+<dl class="dl">
+
+ <dt class="dt dlterm">Properties </dt>
+
+ <dd class="dd">
+  <ul class="sl simple">
+  <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__type">Type</a>: int64
+  </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__cardinality">Cardinality</a>: 1
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__optional">Optional</a>: true
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__expressionmode">ExpressionMode</a>: AttributeFree
+     </li>
+
+  </ul>
+
+ </dd>
+
+
+</dl>
+
+</dd>
+
+
+
+<dt class="dt dlterm" id="spldoc_operator__parameter_metricCollectionInterval"><tt class="ph tt">metricCollectionInterval</tt></dt>
+
+<dd class="dd">
+<p class="p">Indicates how often the operator will grab the metrics information (in seconds).  The value will default to 3.0.
+</p>
+
+<p class="p">It is important for end user to take note of the  HC.MetricCollectionInterval instance property.  It will not make  sense to have a metricCollectionInterval value greater than this property value.
+</p>
+<dl class="dl">
+
+ <dt class="dt dlterm">Properties </dt>
+
+ <dd class="dd">
+  <ul class="sl simple">
+  <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__type">Type</a>: float64
+  </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__cardinality">Cardinality</a>: 1
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__optional">Optional</a>: true
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__expressionmode">ExpressionMode</a>: AttributeFree
+     </li>
+
+  </ul>
+
+ </dd>
+
+
+</dl>
+
+</dd>
+
+
+
+<dt class="dt dlterm" id="spldoc_operator__parameter_jobID"><tt class="ph tt">jobID</tt></dt>
+
+<dd class="dd">
+<p class="p">The Streams Job ID containing the operator to be measured. Not specifying this operator will cause the current job to be used (the job running this MetricsTupleCounter operator. 
+</p>
+<dl class="dl">
+
+ <dt class="dt dlterm">Properties </dt>
+
+ <dd class="dd">
+  <ul class="sl simple">
+  <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__type">Type</a>: int32
+  </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__cardinality">Cardinality</a>: 1
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__optional">Optional</a>: true
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__expressionmode">ExpressionMode</a>: AttributeFree
+     </li>
+
+  </ul>
+
+ </dd>
+
+
+</dl>
+
+</dd>
+
+
+</dl>
+
+</div>
+
+<div class="section">
+<p class="p splhead-1"><strong class="ph b"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__context__dependencies">Libraries</a></strong></p>
+
+ <dl class="dl">
+ 
+  <dt class="dt dlterm">Java operator class library
+  </dt>
+
+  <dd class="dd"/>
+
+  <dd class="dd"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__context__dependencies__managedlibrary__libpath">Library Path</a>: <tt class="ph tt">../../impl/java/bin</tt></dd>
+
+ 
+ </dl>
+
+</div>
+
+</div>
+
+
+</body>
+</html>

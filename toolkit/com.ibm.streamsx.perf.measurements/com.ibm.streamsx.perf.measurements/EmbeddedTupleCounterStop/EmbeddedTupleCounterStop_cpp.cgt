@@ -1,0 +1,347 @@
+/*******************************************************************************/
+/* Copyright (C) 2016, International Business Machines Corporation             */
+/* All Rights Reserved                                                         */
+/*******************************************************************************/
+
+/* Additional includes go here */
+#include <iomanip>
+
+<%
+  use EmbeddedTupleCounterStopCommon;
+  my ($mode, $tupleCount, $punctCount, $measurementIntervals, $includeHeaders) = EmbeddedTupleCounterStopCommon::getParms($model);
+  
+  # There must be at least 2 input ports.  The last input port (n) is assumed to contain tuples flowing from the
+  # operator being tested.  The first n-1 input ports are assumed to be start ports 
+  my $numberInputPorts = $model->getNumberOfInputPorts();
+  if ($numberInputPorts < 2) {
+    SPL::CodeGen::exitln("Operator must contain at least two input ports");    
+  }  
+  my $numberStartPorts = $numberInputPorts - 1;
+  
+  # Verify each start input port stream has just a single timestamp attribute (the start time)
+  my @timeAttrs;
+  for (my $i=1; $i <= $numberStartPorts; $i++) {
+    my $inPort = $model->getInputPortAt($i);
+    my $errMsg1 = "Input port $i stream must have only 1 attribute and must be of type timestamp";
+    if (1 != $inPort->getNumberOfAttributes()) {
+      SPL::CodeGen::exitln($errMsg1);  
+    }
+    push @timeAttrs, $inPort->getAttributeAt(0);
+    if (!SPL::CodeGen::Type::isTimestamp($inPort->getAttributeAt(0)->getSPLType())) {
+      SPL::CodeGen::exitln($errMsg1);    
+    }
+  }
+  
+ 
+  # If includeHeaders set to true, then it is required
+  # that all output attributes be rstrings
+  if ($includeHeaders) {
+    my $outPort = $model->getOutputPortAt(0);
+    my $numOutAttrs = $outPort->getNumberOfAttributes();
+    for (my $i = 0; $i < $numOutAttrs; $i++) {
+      my $nextAttr = $outPort->getAttributeAt($i);
+      my $nextAttrType = $nextAttr->getSPLType();
+      if ("rstring" ne $nextAttrType) {
+        SPL::CodeGen::exitln("All output attributes must be of type rstring if the includeHeaders parameter is set to true.");      
+      } 
+    }      
+  }      
+ 
+%>   
+
+<%SPL::CodeGen::implementationPrologue($model);%>
+
+// Constructor
+MY_OPERATOR::MY_OPERATOR() : MAX_INTERVAL_COUNT(<%=$measurementIntervals%>), currentIntervalCount(0),
+ 
+<%
+if ($mode eq "TupleCount") {
+%>
+                             MAX_TUPLE_COUNT(<%=$tupleCount%>)
+<%
+}
+else {
+%>
+                             MAX_PUNCT_COUNT(<%=$punctCount%>), currentPunctCount(0) 
+<%
+}
+%>
+{
+    // Initialization code goes here
+    
+<%
+  if (1 == $includeHeaders) {
+%>
+    printedHeaders = false;
+<%
+  }
+%>    
+    
+ currentTupleCount = 0;  // needed to initialize this here to get rid of a compiler warning.  whatever...    
+}
+
+// Destructor
+MY_OPERATOR::~MY_OPERATOR() 
+{
+    // Finalization code goes here
+}
+
+// Notify port readiness
+void MY_OPERATOR::allPortsReady() 
+{
+    // Notifies that all ports are ready. No tuples should be submitted before
+    // this. Source operators can use this method to spawn threads.
+
+    /*
+      createThreads(1); // Create source thread
+    */
+}
+ 
+// Notify pending shutdown
+void MY_OPERATOR::prepareToShutdown() 
+{
+    // This is an asynchronous call
+}
+
+// Processing for source and threaded operators   
+void MY_OPERATOR::process(uint32_t idx)
+{
+    // A typical implementation will loop until shutdown
+    /*
+      while(!getPE().getShutdownRequested()) {
+          // do work ...
+      }
+    */
+}
+
+// Tuple processing for mutating ports 
+void MY_OPERATOR::process(Tuple & tuple, uint32_t port)
+{
+    // Sample submit code
+    /* 
+      submit(otuple, 0); // submit to output port 0
+    */
+}
+
+// Tuple processing for non-mutating ports
+void MY_OPERATOR::process(Tuple const & tuple, uint32_t port)
+{
+  SPL::AutoPortMutex automutex(processMutex, *this);
+  switch(port) {
+<%  
+  for (my $i=1; $i <= $numberStartPorts; $i++) {
+%>
+    case <%=$i%>:
+      {
+        IPort<%=$i%>Type const & ituple = static_cast<IPort<%=$i%>Type const&> (tuple);      
+        startTimes<%=$i%>.push_back(ituple.get_<%=$timeAttrs[$i-1]->getName()%>()); 
+        checkTimeQueues();
+      }        
+      break;
+<%
+  }
+%>
+  
+
+
+    // tuples coming through this port are the ones to be counted
+    default: 
+<%
+if ($mode eq "TupleCount") {
+%>
+      currentTupleCount++;
+      if (MAX_TUPLE_COUNT == currentTupleCount) {
+        if (currentIntervalCount < (MAX_INTERVAL_COUNT)) {  
+          StopInfo stopInfo;
+          stopInfo.ts = SPL::Functions::Time::getTimestamp();
+          stopInfo.tupleCount = currentTupleCount;
+          stopInfo.intervalCount = currentIntervalCount;
+          stopTimes.push_back(stopInfo);
+          checkTimeQueues();
+          currentTupleCount = 0;
+          currentIntervalCount++;
+        }   
+      }
+<%
+}  else {
+%>
+      currentTupleCount++;    
+<%
+}
+%>
+  }  // end switch  
+    
+}
+
+// Punctuation processing
+void MY_OPERATOR::process(Punctuation const & punct, uint32_t port)
+{
+  if (0 == port) {
+<%
+if ($mode eq "PunctCount") {
+%>
+    SPL::AutoPortMutex automutex(processMutex, *this);
+    currentPunctCount++;
+    if (MAX_PUNCT_COUNT == currentPunctCount) {
+      if (currentIntervalCount < (MAX_INTERVAL_COUNT)) {  
+        StopInfo stopInfo;
+        stopInfo.ts = SPL::Functions::Time::getTimestamp();
+        stopInfo.tupleCount = currentTupleCount;
+        stopInfo.intervalCount = currentIntervalCount;
+        stopTimes.push_back(stopInfo);            
+        checkTimeQueues();
+        currentPunctCount = 0;
+        currentTupleCount = 0;
+        currentIntervalCount++;
+      }   
+    }  
+<%
+}
+%>  
+  }
+}
+
+void MY_OPERATOR::checkTimeQueues() {
+  // If the stopTimes lists and startTimes lists all have an entry in them, 
+  // then pop off the front of each list and output a tuple
+  if (
+<%
+  for (my $i=1; $i <= $numberStartPorts; $i++) {
+%>
+     (startTimes<%=$i%>.size() > 0) &&
+<%
+  }
+%>  
+     (stopTimes.size() > 0)) {
+
+    StopInfo stopInfo = stopTimes.front();
+    stopTimes.pop_front();
+    SPL::float64 duration = 0.0;
+<%
+  for (my $i=1; $i <= $numberStartPorts; $i++) {
+%>
+    SPL::timestamp startTime<%=$i%> = startTimes<%=$i%>.front();
+    startTimes<%=$i%>.pop_front();
+    SPL::float64 duration<%=$i%> = SPL::Functions::Time::diffAsSecs(stopInfo.ts, startTime<%=$i%>);
+    if (duration<%=$i%> > duration) {
+      duration = duration<%=$i%>;
+    }
+<%
+  }
+%>
+    
+    OPort0Type otuple;
+    
+// Print headers if the first tuple and includeHeaders param is set to true.
+// Use the header value from the output function if specified, else
+// just use the name of the output attribute
+<% 
+  if (1 == $includeHeaders) {  
+%>
+  if (false == printedHeaders) {
+<%
+   my $outPort = $model->getOutputPortAt(0);
+   my $numOutAttrs = $outPort->getNumberOfAttributes();
+   for (my $i = 0; $i < $numOutAttrs; $i++) {
+     my $nextAttr = $outPort->getAttributeAt($i);
+     my $nextAttrName = $nextAttr->getName();
+     my $func = $nextAttr->getAssignmentOutputFunctionName();
+     my $headerParm = 0;     
+     if ("Any" eq $func) {
+       $headerParm = 1;
+     }
+     if ($nextAttr->hasAssignmentWithOutputFunction()) {
+       my $func = $nextAttr->getAssignmentOutputFunctionName();
+       my $exp = $nextAttr->getAssignmentOutputFunctionParameterValueAt($headerParm);
+       my $header;
+       if (defined($exp)) {
+         $header = $exp->getSPLExpression();
+       }
+       else {
+         $header = "\"$nextAttrName\"";
+       }
+       print("  otuple.set_$nextAttrName($header);\n");       
+     }         
+   }
+%>  
+    submit(otuple, 0);
+    printedHeaders = true;
+  }
+<%
+  }
+%>      
+    
+    
+    
+<%
+   my $outPort = $model->getOutputPortAt(0);
+   my $numOutAttrs = $outPort->getNumberOfAttributes();
+   for (my $i = 0; $i < $numOutAttrs; $i++) {
+     my $nextAttr = $outPort->getAttributeAt($i);
+     my $nextAttrName = $nextAttr->getName();
+     my $nextAttrTypeC = $nextAttr->getCppType();
+     my $nextAttrTypeS = $nextAttr->getSPLType();     
+     if ($nextAttr->hasAssignmentWithOutputFunction()) {
+       my $func = $nextAttr->getAssignmentOutputFunctionName();
+       if ("Duration" eq $func) { 
+         if ("rstring" eq $nextAttrTypeS) {
+           print("    otuple.set_$nextAttrName(float64ToString(duration));\n");
+         }
+         else {    
+           print("    otuple.set_$nextAttrName(($nextAttrTypeC)duration);\n");
+         }
+       } 
+       elsif ("Count" eq $func) {
+        if ("rstring" eq $nextAttrTypeS) {
+           print("    otuple.set_$nextAttrName(uint64ToString(stopInfo.tupleCount));\n");
+         }
+         else {    
+           print("    otuple.set_$nextAttrName(($nextAttrTypeC)stopInfo.tupleCount);\n");
+         }
+       } 
+       elsif ("Rate" eq $func) {
+         print("    SPL::float64 rate = stopInfo.tupleCount / duration;\n");
+         if ("rstring" eq $nextAttrTypeS) {
+           print("    otuple.set_$nextAttrName(float64ToString(rate));\n");
+         }
+         else {    
+           print("    otuple.set_$nextAttrName(($nextAttrTypeC)rate);\n");
+         }
+       }
+       elsif ("Interval" eq $func) {
+         if ("rstring" eq $nextAttrTypeS) {
+           print("    otuple.set_$nextAttrName(uint64ToString(stopInfo.intervalCount));\n");
+         }
+         else {    
+           print("    otuple.set_$nextAttrName(($nextAttrTypeC)stopInfo.intervalCount);\n");
+         }
+       }       
+       elsif ("Any" eq $func) {
+         my $exp = $nextAttr->getAssignmentOutputFunctionParameterValueAt(0);
+         #print("  otuple.set_$nextAttrName(" . SPL::CodeGen::adaptCppExpression($exp->getCppExpression(), "ituple") . ");\n");
+         print("    otuple.set_$nextAttrName(" . $exp->getCppExpression . ");\n");                       
+       }                     
+     }
+     
+   }
+%>  
+  
+    submit(otuple, 0);    
+  }
+}
+
+SPL::rstring MY_OPERATOR::float64ToString(SPL::float64 f) {
+  std::stringstream ss;
+  ss << std::fixed << std::setprecision(2) << f;
+  return(ss.str());
+}  
+
+SPL::rstring MY_OPERATOR::uint64ToString(SPL::uint64 u) {
+  std::stringstream ss;
+  ss << u;
+  return(ss.str());
+}  
+
+
+<%SPL::CodeGen::implementationEpilogue($model);%>
+

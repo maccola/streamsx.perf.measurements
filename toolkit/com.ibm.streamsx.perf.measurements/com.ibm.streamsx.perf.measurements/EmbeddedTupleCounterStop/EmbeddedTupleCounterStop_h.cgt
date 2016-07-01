@@ -1,0 +1,88 @@
+/*******************************************************************************/
+/* Copyright (C) 2016, International Business Machines Corporation             */
+/* All Rights Reserved                                                         */
+/*******************************************************************************/
+/* Additional includes go here */
+
+<%
+
+  use EmbeddedTupleCounterStopCommon;
+  my ($mode, $tupleCount, $punctCount, $measurementIntervals, $includeHeaders) = EmbeddedTupleCounterStopCommon::getParms($model);
+  
+  my $numberStartPorts = $model->getNumberOfInputPorts() - 1;
+%>   
+
+<%SPL::CodeGen::headerPrologue($model);%>
+
+class MY_OPERATOR : public MY_BASE_OPERATOR 
+{
+public:
+  // Constructor
+  MY_OPERATOR();
+
+  // Destructor
+  virtual ~MY_OPERATOR(); 
+
+  // Notify port readiness
+  void allPortsReady(); 
+
+  // Notify pending shutdown
+  void prepareToShutdown(); 
+
+  // Processing for source and threaded operators   
+  void process(uint32_t idx);
+    
+  // Tuple processing for mutating ports 
+  void process(Tuple & tuple, uint32_t port);
+    
+  // Tuple processing for non-mutating ports
+  void process(Tuple const & tuple, uint32_t port);
+
+  // Punctuation processing
+  void process(Punctuation const & punct, uint32_t port);
+private:
+  // Members
+  
+  class StopInfo {
+    public:
+      SPL::timestamp ts;
+      SPL::uint64    tupleCount;
+      SPL::uint64    intervalCount;
+  };
+  
+  void checkTimeQueues();
+
+  Mutex              processMutex;
+  const SPL::uint64  MAX_INTERVAL_COUNT;
+  SPL::uint64        currentIntervalCount;
+
+<%
+if ($mode eq "TupleCount") {
+%>
+  const SPL::uint64  MAX_TUPLE_COUNT;
+<%
+}
+else {
+%>
+  const SPL::uint64  MAX_PUNCT_COUNT;
+  SPL::uint64        currentPunctCount; 
+<%
+}
+%>
+  SPL::uint64        currentTupleCount; 
+<%
+  for (my $i=1; $i <= $numberStartPorts; $i++) {
+%>  
+  std::list<SPL::timestamp> startTimes<%=$i%>;
+<%
+  }
+%>
+  std::list<StopInfo> stopTimes;
+  
+  SPL::boolean printedHeaders;
+  SPL::rstring float64ToString(SPL::float64);
+  SPL::rstring uint64ToString(SPL::uint64);        
+}; 
+
+<%SPL::CodeGen::headerEpilogue($model);%>
+

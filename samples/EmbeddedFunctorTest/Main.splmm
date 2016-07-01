@@ -1,0 +1,101 @@
+/*******************************************************************************/
+/* Copyright (C) 2016, International Business Machines Corporation             */
+/* All Rights Reserved                                                         */
+/*******************************************************************************/
+
+//****************************************************
+// This application will measure how fast a Functor
+// can process tuples by measuring with the
+// EmbeddedTupleCounterStart and EmbeddedTupleCounterStop
+// operators.
+//****************************************************
+
+<%
+  # Constants
+  my $numTuples = 1000000;            # Number of source tuples to create
+  my $blastLoops = 10000;             # Number of times to blast all source tuples
+  my $punctCountFrequency =  300;     # How frequent to do a measurement
+  my $measurementIntervals = 10;      # How many measurements to do
+%>
+
+use com.ibm.streamsx.perf.measurements::*;
+
+composite Main {
+
+  graph
+  
+  // Use a simple Custom to generate the tuples
+  stream<uint64 cnt, rstring name> rawData = Custom() {
+    logic
+      onProcess: {
+        uint64  numTuples = <%=$numTuples%>ul;
+        mutable uint64 i = 0ul;
+        while (i < numTuples) {
+          rstring nextName = "Name" + (rstring)i;
+          submit({cnt = i, name = nextName}, rawData);
+          i++;
+        }
+        submit(Sys.WindowMarker, rawData);
+      }
+      config placement: partitionColocation("A");         
+  }
+  
+  // Buffer the tuples in memory before blasting them all out in once.
+  // Note that you have to be conscious of memory limitations
+  // on your system if you buffer huge amounts of data
+  stream<rawData> blasted = Blast(rawData) {
+    param
+      loops : <%=$blastLoops%>ul;
+      punctOnLoop  : true;
+      maxTuples  : <%=$numTuples%>ul;
+    config placement: partitionColocation("B");         
+  }
+  
+  // Start the measurement
+ (stream <timestamp startTime> start ; stream <rawData> blasted2) = EmbeddedTupleCounterStart(blasted) {
+  
+    param
+      //measurementMode: PunctCount;
+      //punctCount : <%=$punctCountFrequency%>ul;
+       measurementMode: TupleCount;
+       tupleCount :     500000000ul;
+      measurementIntervals : <%=$measurementIntervals%>ul;
+    config placement: partitionColocation("B");         
+  }
+  
+  // Test For measurement of a simple Functor
+  stream <rawData> processed = Functor(blasted2) {
+    output processed:
+      cnt = cnt * 2ul;
+    config placement: partitionColocation("B");     
+  }
+  
+
+  // Stop the measurement
+  stream <rstring cnt, rstring duration, rstring rate, rstring interval> results = EmbeddedTupleCounterStop(processed; start) {
+    param
+       //measurementMode: PunctCount;
+      //punctCount : <%=$punctCountFrequency%>ul;
+       measurementMode: TupleCount;
+       tupleCount :     500000000ul;
+      measurementIntervals : <%=$measurementIntervals%>ul;
+      includeHeaders       : true;
+    output results:
+      interval = Interval("Interval"),
+      cnt = Count("Count"),
+      duration = Duration("Duration"),
+      rate = Rate("Rate");
+    config placement: partitionColocation("B");  
+  }  
+  
+  // Dump the measurements in a file
+ () as dumpResults= FileSink(results) {     
+      param
+        file         : "output.csv";
+        format       : csv;    
+        flush        : 1u;
+        quoteStrings : false;
+      config placement: partitionColocation("C");
+  }
+}
+

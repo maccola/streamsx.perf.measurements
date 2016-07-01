@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="copyright" content="(C) Copyright 2005"/>
+<meta name="DC.rights.owner" content="(C) Copyright 2005"/>
+<meta name="DC.Type" content="reference"/>
+<meta name="DC.Title" content="Examples"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="spldoc_page"/>
+<link rel="stylesheet" type="text/css" href="../../html/commonltr.css"/>
+<link rel="stylesheet" type="text/css" href="../../html/spldoc.css"/>
+<title>Examples</title>
+</head>
+<body id="spldoc_page">
+
+
+<h1 class="title topictitle1">Examples</h1>
+
+<div class="body refbody">
+<div class="section">
+<p class="p">
+<a class="xref" href="../toolkits/toolkits.html">Toolkits</a> &gt; <a class="xref" href="tk$com.ibm.streamsx.perf.measurements.html">com.ibm.streamsx.perf.measurements 1.0.0</a> &gt; <a class="xref" href="ns$com.ibm.streamsx.perf.measurements.html">com.ibm.streamsx.perf.measurements</a> &gt; <a class="xref" href="op$com.ibm.streamsx.perf.measurements$MetricsTupleCounter.html">MetricsTupleCounter</a> &gt; Examples</p>
+
+</div>
+
+
+<div class="section">
+<div class="p">
+<pre class="pre codeblock">
+composite Main {
+
+  graph
+   
+    // Measure the tuples going through the myalias1 output stream
+    stream &lt;float64 duration, uint64 tuples, float64 rate&gt; metricsx = MetricsTupleCounter() {
+      param
+        measurementType : outputPort;        
+        streamName    : "myalias1";              
+        tuplesPerMeasurementInterval:     1000000000l;
+        measurementIntervals : 3l;  
+        metricCollectionInterval:  3.5;
+      config placement: partitionColocation("B");      
+    }
+
+    stream &lt;int64 interval, float64 duration1, uint64 count1, float64 rate1&gt; formattedMetrics = MetricsTupleCounterHelper(metricsx) {
+      output formattedMetrics:
+        interval = Interval(),
+        duration1 = Duration(),
+        count1 = Count(),
+        rate1 = Rate();
+      config placement: partitionColocation("B");    
+    }
+
+    () as measureDump = FileSink(formattedMetrics) {
+      param
+        file : "metrics.csv";
+        format: csv;   
+        flush:  1u;
+    config placement: partitionColocation("B");
+  }
+
+  stream&lt;uint64 x&gt; beat as myalias1 = Beacon() {
+    param
+      period:  0.1;
+    output beat:
+      x = IterationCount();
+    config placement: partitionColocation("A");
+  }
+
+  stream&lt;beat&gt; processed = Functor(beat) {
+    logic state: {
+      mutable uint64 cnt = 0ul;
+     }
+     param
+       filter : cnt++ &lt;= 299ul;
+    config placement: partitionColocation("A");
+  }
+    
+  () as dump= FileSink(processed) {     
+    param
+      file : "output.csv";
+      format: csv;    
+      flush : 1u;
+    config placement: partitionColocation("A");
+  }
+}
+</pre>
+
+
+</div>
+
+</div>
+
+</div>
+
+
+</body>
+</html>

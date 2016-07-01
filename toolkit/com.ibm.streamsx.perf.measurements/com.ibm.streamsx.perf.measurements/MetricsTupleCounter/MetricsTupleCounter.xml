@@ -1,0 +1,209 @@
+<?xml version="1.0" ?>
+<!-- Copyright (C) 2015, International Business Machines Corporation  -->
+<!-- All Rights Reserved                                              -->
+<!--                                                                  -->
+<operatorModel
+  xmlns="http://www.ibm.com/xmlns/prod/streams/spl/operator" 
+  xmlns:cmn="http://www.ibm.com/xmlns/prod/streams/spl/common" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.ibm.com/xmlns/prod/streams/spl/operator operatorModel.xsd">
+  <javaOperatorModel>
+    <context> 
+      <description>
+Brief description of the operator
+The `MetricsTupleCounter` operator will report metrics data about
+tuple rates flowing through input or output ports.
+
+The operator can look at tuple rates in operators within the same
+job as the MetricsTupleCounter operator is running in or it can
+look at other jobs.
+
+The operator will measure for a configurable number of intervals 
+that are based on tuple counts.  The size of the tuple counts
+used to measure the intervals is configurable. 
+
+Since `MetricsTupleCounter` relies on metrics data for its
+information, it will not work in a standalone mode application
+where metrics are not available. 
+
+The `MetricsTupleCounterHelper` operator can be used
+in conjunction with the `MetricsTupleCounter` operator
+for easier output formatting.  The instances of these
+two operators should be paired in the same Processing
+Element (PE).
+
++ Examples
+    
+    composite Main {
+    
+      graph
+   
+        // Measure the tuples going through the myalias1 output stream
+        stream &lt;float64 duration, uint64 tuples, float64 rate&gt; metricsx = MetricsTupleCounter() {
+          param
+            measurementType : outputPort;        
+            streamName    : "myalias1";              
+            tuplesPerMeasurementInterval:     1000000000l;
+            measurementIntervals : 3l;  
+            metricCollectionInterval:  3.5;
+          config placement: partitionColocation("B");      
+        }
+    
+        stream &lt;int64 interval, float64 duration1, uint64 count1, float64 rate1&gt; formattedMetrics = MetricsTupleCounterHelper(metricsx) {
+          output formattedMetrics:
+            interval = Interval(),
+            duration1 = Duration(),
+            count1 = Count(),
+            rate1 = Rate();
+          config placement: partitionColocation("B");    
+        }
+    
+        () as measureDump = FileSink(formattedMetrics) {
+          param
+            file : "metrics.csv";
+            format: csv;   
+            flush:  1u;
+        config placement: partitionColocation("B");
+      }
+    
+      stream&lt;uint64 x&gt; beat as myalias1 = Beacon() {
+        param
+          period:  0.1;
+        output beat:
+          x = IterationCount();
+        config placement: partitionColocation("A");
+      }
+    
+      stream&lt;beat&gt; processed = Functor(beat) {
+        logic state: {
+          mutable uint64 cnt = 0ul;
+         }
+         param
+           filter : cnt++ &lt;= 299ul;
+        config placement: partitionColocation("A");
+      }
+        
+      () as dump= FileSink(processed) {     
+        param
+          file : "output.csv";
+          format: csv;    
+          flush : 1u;
+        config placement: partitionColocation("A");
+      }
+    }
+      </description>
+      <customLiterals>
+        <enumeration>
+          <name>com.ibm.streamsx.perf.measurements.MetricsTupleCounter.Type</name>
+            <value>outputPort</value>
+            <value>inputPort</value>
+            </enumeration>
+      </customLiterals>
+      <executionSettings>
+        <className>com.ibm.streamsx.perf.measurements.MetricsTupleCounter</className>
+        <!-- some optional elements
+        <vmArgs>
+          <vmArg>-my-vm-arg</vmArg>
+        </vmArgs>
+        -->
+      </executionSettings>
+      <libraryDependencies>
+        <library>
+          <cmn:description>Java operator class library</cmn:description>
+          <cmn:managedLibrary>
+            <cmn:libPath>../../impl/java/bin</cmn:libPath>
+          </cmn:managedLibrary>
+        </library>
+      </libraryDependencies>
+    </context>  
+    <parameters>
+      <parameter>
+        <name>measurementType</name>
+        <description>
+Indicates whether we are going to measure an input port
+or an output port of an operator.
+Valid values are `outputPort` and `inputPort`.
+        </description>
+        <optional>false</optional>
+        <expressionMode>CustomLiteral</expressionMode>
+        <type>com.ibm.streamsx.perf.measurements.MetricsTupleCounter.Type</type>
+        <cardinality>1</cardinality>
+      </parameter>
+      <parameter>
+        <name>streamName</name>
+        <description>
+Specifies the name of the stream that are to be measured.
+If the stream name has an alias, the alias should be used.
+Otherwise use the name of the stream.
+        </description>
+        <optional>false</optional>
+        <expressionMode>AttributeFree</expressionMode>
+        <type>rstring</type>
+        <cardinality>1</cardinality>
+      </parameter>
+      <parameter>
+        <name>tuplesPerMeasurementInterval</name>
+        <description>
+Number of tuples that define a measurement inteval.
+        </description>
+        <optional>false</optional>
+        <expressionMode>AttributeFree</expressionMode>
+        <type>int64</type>
+        <cardinality>1</cardinality>
+      </parameter>
+      <parameter>
+        <name>measurementIntervals</name>
+        <description>
+Number of intervals to measure.  Default is one.
+        </description>
+        <optional>true</optional>
+        <expressionMode>AttributeFree</expressionMode>
+        <type>int64</type>
+        <cardinality>1</cardinality>
+      </parameter>
+      <parameter>
+        <name>metricCollectionInterval</name>
+        <description>
+Indicates how often the operator will grab the metrics information
+(in seconds).  The value will default to 3.0.
+
+It is important for end user to take note of the 
+HC.MetricCollectionInterval instance property.  It will not make 
+sense to have a metricCollectionInterval value greater than
+this property value.
+        </description>
+        <optional>true</optional>
+        <expressionMode>AttributeFree</expressionMode>
+        <type>float64</type>
+        <cardinality>1</cardinality>
+      </parameter>
+      <parameter>
+        <name>jobID</name>
+        <description>
+The Streams Job ID containing the operator to be measured.
+Not specifying this operator will cause the current job
+to be used (the job running this MetricsTupleCounter operator. 
+        </description>
+        <optional>true</optional>
+        <expressionMode>AttributeFree</expressionMode>
+        <type>int32</type>
+        <cardinality>1</cardinality>
+      </parameter>
+    </parameters>
+    <inputPorts/>
+    <outputPorts>
+      <outputPortSet>
+      <description>
+The `MetricsTupleCounter` operator has one required output port.
+The streams schema must follow a required format where there
+are three attribues of float64 duration, uint64 tuples, float64 rate.
+The attribute can be any names, but have these types.
+      </description>
+        <windowPunctuationOutputMode>Generating</windowPunctuationOutputMode>
+        <cardinality>1</cardinality>
+        <optional>false</optional>
+      </outputPortSet>          
+    </outputPorts>
+  </javaOperatorModel>
+</operatorModel>
+

@@ -1,0 +1,139 @@
+<?xml version="1.0" ?>
+<!-- Copyright (C) 2015, International Business Machines Corporation  -->
+<!-- All Rights Reserved                                              -->
+<!--                                                                  -->
+<operatorModel
+  xmlns="http://www.ibm.com/xmlns/prod/streams/spl/operator" 
+  xmlns:cmn="http://www.ibm.com/xmlns/prod/streams/spl/common" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.ibm.com/xmlns/prod/streams/spl/operator operatorModel.xsd">
+  <cppOperatorModel>
+    <context>
+    <description>
+The `MetricsTupleCounterHelper` operator is to be used
+in conjunction with the `MetricsTupleCounter` operator.
+The `MetricsTupleCounterHelper` operator
+contains output functions for easier formatting of output.
+
+The `MetricsTupleCounterHelper` and `MetricsTupleCounter`
+operator should be fused into the same
+Processing Element (PE).
+
++ Examples
+    See example in the MetricsTupleCounter documenation.
+    </description>
+      <customOutputFunctions>
+        <customOutputFunction>
+          <name>HelperOperations</name>
+          <function>
+            <description>Return the argument unchanged</description>
+            <prototype><![CDATA[<any T> T Any(T v)]]></prototype>
+          </function>
+          <function>
+            <description>Return the argument unchanged.
+Include a custom header if includeHeaders parameter is true.
+            </description>
+            <prototype><![CDATA[rstring Any(rstring v, rstring description)]]></prototype>
+          </function>
+          <function>
+            <description>Return the duration (seconds)</description>
+            <prototype><![CDATA[<any T> T Duration()]]></prototype>
+          </function>
+          <function>
+            <description>Return the duration (seconds).
+Include a custom header if includeHeaders parameter is true.
+            </description>
+            <prototype><![CDATA[rstring  Duration(rstring description)]]></prototype>
+          </function>
+          <function>
+            <description>Return the tuple count</description>
+            <prototype><![CDATA[<any T> T Count()]]></prototype>
+          </function>
+          <function>
+            <description>Return the tuple count.
+Include a custom header if includeHeaders parameter is true.
+            </description>
+            <prototype><![CDATA[rstring  Count(rstring description)]]></prototype>
+          </function>
+          <function>
+            <description>Return the tuple rate (per second)</description>
+            <prototype><![CDATA[<any T> T Rate()]]></prototype>
+          </function>
+          <function>
+            <description>Return the tuple rate (per second).
+Include a custom header if includeHeaders parameter is true.
+            </description>
+            <prototype><![CDATA[rstring  Rate(rstring description)]]></prototype>
+          </function>
+          <function>
+            <description>Return the current interval</description>
+            <prototype><![CDATA[<any T> T Interval()]]></prototype>
+          </function>
+          <function>
+            <description>Return the current interval.
+Include a custom header if includeHeaders parameter is true.
+            </description>
+            <prototype><![CDATA[rstring  Interval(rstring description)]]></prototype>
+          </function>
+        </customOutputFunction>
+      </customOutputFunctions>
+      <providesSingleThreadedContext>Always</providesSingleThreadedContext>
+    </context>  
+    <parameters>
+      <allowAny>false</allowAny>
+      <parameter>
+        <name>includeHeaders</name>
+        <description>
+If includeHeaders is set to true, attribute descriptions will
+be placed in an extra tuple prior to the first tuple being output.
+All attributes in the output stream must be of type rstring
+if includeHeaders is true.  This value will default to false.
+        </description>
+        <optional>true</optional>
+        <rewriteAllowed>false</rewriteAllowed>
+        <expressionMode>AttributeFree</expressionMode>
+        <type>boolean</type>
+        <cardinality>1</cardinality>
+      </parameter>
+    </parameters>
+    <inputPorts>
+      <inputPortSet>
+      <description>
+There is one required input port.
+The streams schema must follow a required format where there
+are three attribues of float64 duration, uint64 tuples, float64 rate.
+The attribute can be any names, but have these types.
+      </description>
+        <tupleMutationAllowed>false</tupleMutationAllowed>
+        <windowingMode>NonWindowed</windowingMode>
+        <windowPunctuationInputMode>Oblivious</windowPunctuationInputMode>
+        <cardinality>1</cardinality>
+        <optional>false</optional>
+      </inputPortSet>      
+    </inputPorts>
+    <outputPorts>
+      <outputPortSet>
+      <description>
+The `MetricsTupleCounterHelper` operator has one required output
+port.
+
+The output port should contain measurement result data
+using the output functions supplied within the operator.
+
+      </description>
+        <expressionMode>Expression</expressionMode> 
+        <autoAssignment>true</autoAssignment>
+        <completeAssignment>false</completeAssignment>
+        <rewriteAllowed>true</rewriteAllowed>
+        <outputFunctions>
+          <default>Any</default>
+          <type>HelperOperations</type>
+        </outputFunctions>
+        <windowPunctuationOutputMode>Free</windowPunctuationOutputMode>
+        <tupleMutationAllowed>false</tupleMutationAllowed>
+        <cardinality>1</cardinality>
+        <optional>false</optional>
+      </outputPortSet>          
+    </outputPorts>
+  </cppOperatorModel>
+</operatorModel>

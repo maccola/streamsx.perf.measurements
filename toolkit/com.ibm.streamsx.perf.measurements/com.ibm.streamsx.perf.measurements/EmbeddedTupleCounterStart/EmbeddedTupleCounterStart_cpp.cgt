@@ -1,0 +1,168 @@
+/*******************************************************************************/
+/* Copyright (C) 2016, International Business Machines Corporation             */
+/* All Rights Reserved                                                         */
+/*******************************************************************************/
+
+/* Additional includes go here */
+
+<%
+
+  use EmbeddedTupleCounterStartCommon;
+  my ($mode, $tupleCount, $punctCount, $measurementIntervals) = EmbeddedTupleCounterStartCommon::getParms($model);   
+  
+  # Verify output port0 stream has just a single timestamp attribute
+  my $outPort0 = $model->getOutputPortAt(0);
+  my $errMsg1 = "Output port 0 stream must have only 1 attribute and must be of type timestamp";
+  if (1 != $outPort0->getNumberOfAttributes()) {
+    SPL::CodeGen::exitln($errMsg1);  
+  }
+  my $timeAttr = $outPort0->getAttributeAt(0);
+  if (!SPL::CodeGen::Type::isTimestamp($timeAttr->getSPLType())) {
+    SPL::CodeGen::exitln($errMsg1);    
+  }
+ 
+  
+  # Verify output port1 stream schema matches input stream schema
+  my $outPort1 = $model->getOutputPortAt(1);
+  my $inPort = $model->getInputPortAt(0);
+  my $errMsg2 = "The schema for output port 1 stream must match the schema of the input port stream.";
+  if ($outPort1->getNumberOfAttributes() != $inPort->getNumberOfAttributes()) {
+    SPL::CodeGen::exitln($errMsg2);    
+  }
+  for (my $i = 0; $i < $inPort->getNumberOfAttributes(); $i++) {
+    my $inAttr = $inPort->getAttributeAt($i);
+    my $outAttr = $outPort1->getAttributeAt($i);
+    if (($inAttr->getName() ne $outAttr->getName()) || ($inAttr->getSPLType() ne $outAttr->getSPLType())) {
+      SPL::CodeGen::exitln($errMsg2);        
+    }
+  }
+%>
+
+
+<%SPL::CodeGen::implementationPrologue($model);%>
+
+
+
+// Constructor
+MY_OPERATOR::MY_OPERATOR() : MAX_INTERVAL_COUNT(<%=$measurementIntervals%>), currentIntervalCount(0), newInterval(true),
+<%
+if ($mode eq "TupleCount") {
+%>
+                             MAX_TUPLE_COUNT(<%=$tupleCount%>), currentTupleCount(0)
+<%
+}
+else {
+%>
+                             MAX_PUNCT_COUNT(<%=$punctCount%>), currentPunctCount(0) 
+<%
+}
+%>
+{
+    // Initialization code goes here
+}
+
+// Destructor
+MY_OPERATOR::~MY_OPERATOR() 
+{
+    // Finalization code goes here
+}
+
+// Notify port readiness
+void MY_OPERATOR::allPortsReady() 
+{
+    // Notifies that all ports are ready. No tuples should be submitted before
+    // this. Source operators can use this method to spawn threads.
+
+    /*
+      createThreads(1); // Create source thread
+    */
+}
+ 
+// Notify pending shutdown
+void MY_OPERATOR::prepareToShutdown() 
+{
+    // This is an asynchronous call
+}
+
+// Processing for source and threaded operators   
+void MY_OPERATOR::process(uint32_t idx)
+{
+    // A typical implementation will loop until shutdown
+    /*
+      while(!getPE().getShutdownRequested()) {
+          // do work ...
+      }
+    */
+}
+
+// Tuple processing for mutating ports 
+void MY_OPERATOR::process(Tuple & tuple, uint32_t port)
+{
+    // Sample submit code
+    /* 
+      submit(otuple, 0); // submit to output port 0
+    */
+}
+
+// Tuple processing for non-mutating ports
+void MY_OPERATOR::process(Tuple const & tuple, uint32_t port)
+{
+
+    SPL::AutoPortMutex automutex(processMutex, *this);
+
+    // Send a tuple through output port 0 if we want to start
+    // a new measurement interval.
+    if (newInterval == true) {
+      OPort0Type otuple;
+      otuple.set_<%=$timeAttr->getName()%>(SPL::Functions::Time::getTimestamp());
+      submit(otuple, 0);      
+      newInterval = false;
+    }
+    
+    // Everything coming through input port 0, goes right to output port 1
+    submit(tuple, 1);
+
+    // If TupleCount mode, count tuples coming through    
+<%
+if ($mode eq "TupleCount") {
+%>
+    currentTupleCount++;
+    if (MAX_TUPLE_COUNT == currentTupleCount) {
+      if (currentIntervalCount < (MAX_INTERVAL_COUNT- 1)) {  // The minus 1 allows for the first interval when the operator is first invoked.
+        newInterval = true;
+        currentTupleCount = 0;
+        currentIntervalCount++;
+      }
+    }
+<%
+}
+%>
+  
+}
+
+// Punctuation processing
+void MY_OPERATOR::process(Punctuation const & punct, uint32_t port)
+{
+  // Send any punctutation coming through out output port 1
+  submit(punct, 1);
+<%
+if ($mode eq "PunctCount") {
+%>
+    SPL::AutoPortMutex automutex(processMutex, *this);
+    currentPunctCount++;
+    if (MAX_PUNCT_COUNT == currentPunctCount) {
+      if (currentIntervalCount < (MAX_INTERVAL_COUNT - 1)) { // The minus 1 allows for the first interval when the operator is first invoked.
+        newInterval = true;
+        currentPunctCount = 0;
+        currentIntervalCount++;
+      }
+    }
+<%
+}
+%>
+
+}
+
+
+<%SPL::CodeGen::implementationEpilogue($model);%>
+

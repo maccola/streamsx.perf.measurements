@@ -1,0 +1,153 @@
+<?xml version="1.0" ?>
+<!-- Copyright (C) 2015, International Business Machines Corporation  -->
+<!-- All Rights Reserved                                              -->
+<!--                                                                  -->
+<operatorModel
+  xmlns="http://www.ibm.com/xmlns/prod/streams/spl/operator" 
+  xmlns:cmn="http://www.ibm.com/xmlns/prod/streams/spl/common" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.ibm.com/xmlns/prod/streams/spl/operator operatorModel.xsd">
+  <cppOperatorModel>
+    <context>
+    <description>
+The `Blast` operator can be used to collect tuples into memory
+and then send the collected tuples through an output port all
+at once.  The Blast operator should be placed upstream from the
+operator being tested for performance.  The Blast operator should
+be fused with the operator being tested for performance.
+
+Using the Blast operator to test another operators's performance
+will allow network traffic to be removed as a factor and thus
+testing can show a more accurate performance capability of
+an operator.
+
+Note that some degree of caution should be used with the Blast
+operator.  Bufferring to much tuple data could have the unwanted
+effect of utilizing too much system memory.  It is dependent
+on the user to gauge how much data to buffer into memory.
+
+Tuples buffered into memory can be sent downstream multiple
+times.  For example, 1,000 tuples could be buffered into memory.
+These tuples could be sent downstream three times which would
+result in 3,000 tuples being sent to the operator being tested.
+
++ Examples
+
+This example demonstrates a simple invocation of the Blast
+operator. 100,000 tuples will be buffered into memory. 
+The tuples will be sent through 2,000 times.  Resulting
+in 2,000,000 million tuples being sent out of the operator.
+
+    stream&lt;rawData&gt; blasted = Blast(rawData) {
+      param
+        maxTuples  : 1000000ul;
+        loops : 2000ul;
+        punctOnLoop  : true;
+      config placement: partitionColocation("B");         
+    }
+    </description>
+      <providesSingleThreadedContext>Always</providesSingleThreadedContext>
+    </context>  
+    <parameters>
+      <allowAny>false</allowAny>
+      <parameter>
+        <name>maxTuples</name>
+        <description>
+The maximum number of tuples to buffer into memory prior to
+sending.  Once this number of tuples have been bufferred OR
+a puncutation has been received, the operator will send 
+tuples bufferred in memory one after another.  
+If this parameter is not specified, the operator will
+buffer all tuples until a puncutation is received.a
+All input tuples received after reaching this threshold (or
+receiving a punctuation) will be discarded.
+        </description>
+        <optional>true</optional>
+        <rewriteAllowed>false</rewriteAllowed>
+        <expressionMode>AttributeFree</expressionMode>
+        <type>uint64</type>
+        <cardinality>1</cardinality>
+      </parameter>
+      <parameter>
+        <name>loops</name>
+        <description>
+Number of times (loops) to send each tuple
+buffered in memory.  For example, if loops is set
+to 2ul, the operator will send all tuples buffered
+in memory, then immediately send them all a second time.
+If loops is not specified, the value will default to 1ul.
+        </description>
+        <optional>true</optional>
+        <rewriteAllowed>false</rewriteAllowed>
+        <expressionMode>AttributeFree</expressionMode>
+        <type>uint64</type>
+        <cardinality>1</cardinality>
+      </parameter>
+      <parameter>
+        <name>punctOnLoop</name>
+        <description>
+If punctOnLoop parameter is set to true, the operator
+will submit a windows punctuation after each loop.
+If punctOnLoop is not set, the value will default to false.
+        </description>
+        <optional>true</optional>
+        <rewriteAllowed>false</rewriteAllowed>
+        <expressionMode>AttributeFree</expressionMode>
+        <type>boolean</type>
+        <cardinality>1</cardinality>
+      </parameter>
+      <parameter>
+        <name>throttle</name>
+        <description>
+Specifying a value for throttle will cause a delay
+(measured in seconds), between every tuple submitted.
+If throttle is not specified, there will be no delay
+between tuples.
+        </description>
+        <optional>true</optional>
+        <rewriteAllowed>false</rewriteAllowed>
+        <expressionMode>AttributeFree</expressionMode>
+        <type>float64</type>
+        <cardinality>1</cardinality>
+      </parameter>
+      
+    </parameters>
+    <inputPorts>
+      <inputPortSet>
+      <description>
+The `Blast` operator has one required input port.
+
+Prior to meeting the maxTuples threshold or receiving a 
+punctuation, all tuples will be preserved and passed out to the 
+first output port one or more times (depending on the loops
+parameter).
+      </description>
+        <tupleMutationAllowed>false</tupleMutationAllowed>
+        <windowingMode>NonWindowed</windowingMode>
+        <windowPunctuationInputMode>Oblivious</windowPunctuationInputMode>
+        <cardinality>1</cardinality>
+        <optional>false</optional>
+      </inputPortSet>      
+    </inputPorts>
+    <outputPorts>
+      <outputPortSet>
+      <description>
+The `Blast` operator has one required output port.
+
+Tuples are taken from the input
+port and passed out the first output port
+one or more times (depending on the loops
+parameter) without any mutations.
+      </description>
+        <expressionMode>Nonexistent</expressionMode> 
+        <autoAssignment>false</autoAssignment>
+        <completeAssignment>false</completeAssignment>
+        <rewriteAllowed>false</rewriteAllowed>
+        <windowPunctuationOutputMode>Preserving</windowPunctuationOutputMode>
+        <tupleMutationAllowed>false</tupleMutationAllowed>
+        <cardinality>1</cardinality>
+        <optional>false</optional>
+      </outputPortSet>          
+    </outputPorts>
+  </cppOperatorModel>
+</operatorModel>

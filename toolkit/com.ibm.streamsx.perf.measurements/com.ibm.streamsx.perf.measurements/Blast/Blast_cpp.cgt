@@ -1,0 +1,169 @@
+/*******************************************************************************/
+/* Copyright (C) 2016, International Business Machines Corporation             */
+/* All Rights Reserved                                                         */
+/*******************************************************************************/
+
+/* Additional includes go here */
+#include <malloc.h>
+
+<%SPL::CodeGen::implementationPrologue($model);%>
+
+<%
+  my $loops = $model->getParameterByName("loops");
+  if (defined($loops)) {
+    $loops = $loops->getValueAt(0)->getCppExpression();
+  }
+  else {
+    $loops = "1";
+  }
+  
+  my $maxTuples = $model->getParameterByName("maxTuples");
+  if (defined($maxTuples)) {
+    $maxTuples = $maxTuples->getValueAt(0)->getCppExpression();
+  }
+  
+  my $punctOnLoop = 0;
+  my $punctOnLoopParm = $model->getParameterByName("punctOnLoop");
+  if (defined($punctOnLoopParm)) {
+    $punctOnLoopParm = $punctOnLoopParm->getValueAt(0)->getSPLExpression();
+    if ($punctOnLoopParm eq "true") {
+      $punctOnLoop = 1;
+    }
+  }
+  
+  my $throttle = $model->getParameterByName("throttle");
+  if (defined($throttle)) {
+    $throttle = $throttle->getValueAt(0)->getCppExpression();
+  }
+%>
+
+// Constructor
+MY_OPERATOR::MY_OPERATOR() : _blasted(false)
+<%
+  if (defined($maxTuples)) {
+%>
+    , MAX_TUPLE_COUNT(<%=$maxTuples%>)
+<%
+  }
+%>   
+{
+    // Initialization code goes here
+<%
+  if (defined($maxTuples)) {
+%>
+  tupleCount = 0;
+<%
+  }
+%>    
+}
+
+// Destructor
+MY_OPERATOR::~MY_OPERATOR() 
+{
+    // Finalization code goes here
+}
+
+// Notify port readiness
+void MY_OPERATOR::allPortsReady() 
+{
+    // Notifies that all ports are ready. No tuples should be submitted before
+    // this. Source operators can use this method to spawn threads.
+
+    /*
+      createThreads(1); // Create source thread
+    */
+}
+ 
+// Notify pending shutdown
+void MY_OPERATOR::prepareToShutdown() 
+{
+    // This is an asynchronous call
+}
+
+// Processing for source and threaded operators   
+void MY_OPERATOR::process(uint32_t idx)
+{
+    // A typical implementation will loop until shutdown
+    /*
+      while(!getPE().getShutdownRequested()) {
+          // do work ...
+      }
+    */
+}
+
+// Tuple processing for mutating ports 
+void MY_OPERATOR::process(Tuple & tuple, uint32_t port)
+{
+    // Sample submit code
+    /* 
+      submit(otuple, 0); // submit to output port 0
+    */
+}
+
+// Tuple processing for non-mutating ports
+void MY_OPERATOR::process(Tuple const & tuple, uint32_t port)
+{
+    
+      AutoPortMutex(_mutex, *this);
+      if (_blasted)
+        return;
+      
+      // Add the tuple to the buffer
+      OPort0Type const & oTuple = static_cast<OPort0Type const&>(tuple);
+      _tupleBuffer.push_back(oTuple);
+      
+<%
+  if (defined($maxTuples)) {
+%>
+    tupleCount++;
+    if (MAX_TUPLE_COUNT == tupleCount)
+      blastIt();
+<%
+  }
+%>           
+
+}
+
+// Punctuation processing
+void MY_OPERATOR::process(Punctuation const & punct, uint32_t port)
+{
+   AutoPortMutex(_mutex, *this);
+   if (!_blasted)
+     blastIt();
+   
+}
+
+  void MY_OPERATOR::blastIt() {
+   
+   // Blast through any buffered data whenever there is a punctuation
+   // The loops parameter will tell how many times to go through this list
+   for (int i=0; i < <%=$loops%>; i++) {
+     std::list<OPort0Type>::iterator it;
+     for (it=_tupleBuffer.begin(); it != _tupleBuffer.end(); ++it) {
+<% if (defined($throttle)) {
+%>
+      usleep(<%=$throttle%> * 1000000.0);
+<%
+   }
+%>
+       submit(*it, 0);   
+     }
+<%
+  if ($punctOnLoop) {
+%>
+//std::cout << "Blast send tuples:  " << _tupleBuffer.size() << std::endl;     
+       submit(Punctuation::WindowMarker, 0);
+<%
+  }
+%>
+   }
+   
+   
+   // clear the buffer
+   _tupleBuffer.clear();
+
+    _blasted = true;
+  }
+
+<%SPL::CodeGen::implementationEpilogue($model);%>
+

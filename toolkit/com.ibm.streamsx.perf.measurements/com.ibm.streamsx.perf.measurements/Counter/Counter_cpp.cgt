@@ -1,0 +1,143 @@
+/*******************************************************************************/
+/* Copyright (C) 2016, International Business Machines Corporation             */
+/* All Rights Reserved                                                         */
+/*******************************************************************************/
+
+/* Additional includes go here */
+<% 
+  my $isInConsistentRegion = $model->getContext()->getOptionalContext("ConsistentRegion");
+%>
+
+<%SPL::CodeGen::implementationPrologue($model);%>
+
+// Constructor
+MY_OPERATOR::MY_OPERATOR() : _count(0)
+{
+    // Initialization code goes here
+  <% 
+    if ($isInConsistentRegion) {
+  %>
+      getContext().registerStateHandler(*this);
+  <%
+    }
+  %>
+}
+
+// Destructor
+MY_OPERATOR::~MY_OPERATOR() 
+{
+    // Finalization code goes here
+}
+
+// Notify port readiness
+void MY_OPERATOR::allPortsReady() 
+{
+    // Notifies that all ports are ready. No tuples should be submitted before
+    // this. Source operators can use this method to spawn threads.
+
+    /*
+      createThreads(1); // Create source thread
+    */
+}
+ 
+// Notify pending shutdown
+void MY_OPERATOR::prepareToShutdown() 
+{
+    // This is an asynchronous call
+}
+
+// Processing for source and threaded operators   
+void MY_OPERATOR::process(uint32_t idx)
+{
+    // A typical implementation will loop until shutdown
+    /*
+      while(!getPE().getShutdownRequested()) {
+          // do work ...
+      }
+    */
+}
+
+// Tuple processing for mutating ports 
+void MY_OPERATOR::process(Tuple & tuple, uint32_t port)
+{
+    // Sample submit code
+    /* 
+      submit(otuple, 0); // submit to output port 0
+    */
+}
+
+// Tuple processing for non-mutating ports
+// It is assumed that the output tuple is constructed such that 
+// the first attribute is a uint64 which will have the count,
+// while the remaining attributes are exact the same as the input tuple
+void MY_OPERATOR::process(Tuple const & tuple, uint32_t port)
+{
+    AutoPortMutex(_mutex, *this);
+    IPort0Type const & ituple = static_cast<IPort0Type const&>(tuple);
+    
+    _count++;
+    OPort0Type otuple;
+    
+<%
+  my $outPort = $model->getOutputPortAt(0);
+  my $numAttrs = $outPort->getNumberOfAttributes();
+  if ($numAttrs < 1) {
+  }
+  for (my $i=0; $i < $numAttrs; $i++) {
+    my $attr = $outPort->getAttributeAt($i);
+    my $name = $attr->getName();
+    if (0 == $i) {
+      print("otuple.set_${name}(_count);\n");
+    }
+    else {
+      print("otuple.set_${name}(ituple.get_${name}());\n");
+    }    
+  }
+%> 
+   
+    submit(otuple, 0);
+}
+
+// Punctuation processing
+void MY_OPERATOR::process(Punctuation const & punct, uint32_t port)
+{
+    AutoPortMutex(_mutex, *this);
+    submit(punct, 0);
+}
+
+<%
+  if ($isInConsistentRegion) {
+%>
+
+    void MY_OPERATOR::drain() {
+    //std::cout << "ZZZ drain" << std::endl;
+    }
+    
+    void MY_OPERATOR::checkpoint(Checkpoint &ckpt) {
+      std::cout << "ZZZ checkpoint in" << std::endl;
+      AutoMutex am(_mutex);
+      ckpt << _count << "\n";
+      //std::cout << "ZZZ checkpoint out" << std::endl;
+    }
+    
+    void MY_OPERATOR::reset(Checkpoint &ckpt) {
+      std::cout << "ZZZ reset in" << std::endl;    
+      AutoMutex am(_mutex);
+      ckpt >> _count;
+      //std::cout << "ZZZ reset out" << std::endl;        
+    }
+    
+    void MY_OPERATOR::resetToInitialState() {
+      std::cout << "ZZZ resetToInitialState in" << std::endl;   
+      AutoMutex am(_mutex);
+      _count = 0;
+      //std::cout << "ZZZ resetToInitialState out" << std::endl;         
+    }
+
+<%
+  }
+%>
+
+
+<%SPL::CodeGen::implementationEpilogue($model);%>
+

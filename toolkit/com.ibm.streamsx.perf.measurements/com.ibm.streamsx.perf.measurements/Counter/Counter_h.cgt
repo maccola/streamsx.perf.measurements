@@ -1,0 +1,68 @@
+/*******************************************************************************/
+/* Copyright (C) 2016, International Business Machines Corporation             */
+/* All Rights Reserved                                                         */
+/*******************************************************************************/
+
+/* Additional includes go here */
+
+<%
+  my $isInConsistentRegion = $model->getContext()->getOptionalContext("ConsistentRegion");
+  my @includes;
+  if ($isInConsistentRegion) {
+    push @includes, "#include <SPL/Runtime/Operator/State/StateHandler.h>";
+  }
+  SPL::CodeGen::headerPrologue($model, \@includes);
+%>
+
+class MY_OPERATOR : public MY_BASE_OPERATOR 
+<%
+  if ($isInConsistentRegion) {
+%>
+    , StateHandler
+<%
+  }
+%>
+{
+public:
+  // Constructor
+  MY_OPERATOR();
+
+  // Destructor
+  virtual ~MY_OPERATOR(); 
+
+  // Notify port readiness
+  void allPortsReady(); 
+
+  // Notify pending shutdown
+  void prepareToShutdown(); 
+
+  // Processing for source and threaded operators   
+  void process(uint32_t idx);
+    
+  // Tuple processing for mutating ports 
+  void process(Tuple & tuple, uint32_t port);
+    
+  // Tuple processing for non-mutating ports
+  void process(Tuple const & tuple, uint32_t port);
+
+  // Punctuation processing
+  void process(Punctuation const & punct, uint32_t port);
+  
+  <%
+    if ($isInConsistentRegion) {
+  %>
+    virtual void drain();
+    virtual void checkpoint(Checkpoint &ckpt);
+    virtual void reset(Checkpoint & ckpt);
+    virtual void resetToInitialState();
+  <%
+    }
+  %>
+private:
+  // Members
+  uint64_t _count;
+  Mutex _mutex;
+}; 
+
+<%SPL::CodeGen::headerEpilogue($model);%>
+

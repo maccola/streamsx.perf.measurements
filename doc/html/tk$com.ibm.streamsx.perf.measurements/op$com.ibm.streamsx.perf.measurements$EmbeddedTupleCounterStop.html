@@ -1,0 +1,613 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="copyright" content="(C) Copyright 2005"/>
+<meta name="DC.rights.owner" content="(C) Copyright 2005"/>
+<meta name="DC.Type" content="reference"/>
+<meta name="DC.Title" content="Operator EmbeddedTupleCounterStop"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="spldoc_operator"/>
+<link rel="stylesheet" type="text/css" href="../../html/commonltr.css"/>
+<link rel="stylesheet" type="text/css" href="../../html/spldoc.css"/>
+<title>Operator EmbeddedTupleCounterStop</title>
+</head>
+<body id="spldoc_operator">
+
+
+<h1 class="title topictitle1">Operator <tt class="ph tt">EmbeddedTupleCounterStop</tt></h1>
+
+<div class="body refbody">
+<div class="section">
+<p class="p">
+<a class="xref" href="../toolkits/toolkits.html">Toolkits</a> &gt; <a class="xref" href="tk$com.ibm.streamsx.perf.measurements.html">com.ibm.streamsx.perf.measurements 1.0.0</a> &gt; <a class="xref" href="ns$com.ibm.streamsx.perf.measurements.html">com.ibm.streamsx.perf.measurements</a> &gt; EmbeddedTupleCounterStop</p>
+
+</div>
+
+<div class="section splprimop">
+  <embed class="image" src="../../image/tk$com.ibm.streamsx.perf.measurements/op$com.ibm.streamsx.perf.measurements$EmbeddedTupleCounterStop.svg" width="672" height="112"/>
+</div>
+
+<div class="section">
+
+<p class="p">The <tt class="ph tt">EmbeddedTupleCounterStop</tt> operator that, used in conjunction with the <tt class="ph tt">EmbeddedTupleCounterStart</tt> operator, can allow an application to detect how many tuples are flowing through an operator (or a set of operators).
+</p>
+
+<p class="p">The <tt class="ph tt">EmbeddedTupleCounterStop</tt> operator can also be connected to more than 1 <tt class="ph tt">EmbeddedTupleCounterStart</tt> operators.  This can be useful testing operator with multiple inputs (ie Join).  In that case, when measuring, the timestamps coming from the input ports will be compared and the earlier timestamp is the one that will be used in the measurement.
+</p>
+
+<p class="p">It is important for users of this operator to understand the concepts of Processing Elements (PEs) and fusion.  When measuring the performance of an operator, the EmbeddedTupleCounterStart operator, the EmbeddedTupleCounterStop operator, and the operator being measured should all be placed in the same PE.  Often the <tt class="ph tt">Blast</tt> operator will be used upstream from the EmbeddedTupleCounterStart operator as well.  In this case, the Blast operator should be placed in the same PE as well.
+</p>
+
+  <dl class="dl"><dt class="dt dlterm"><a class="xref" href="op$com.ibm.streamsx.perf.measurements$EmbeddedTupleCounterStop$1.html">Examples</a>
+</dt>
+<dd class="dd">    composite Main {       graph stream&lt;uint64 cnt, rstring name&gt; rawData = Custom() {
+  logic
+    onProcess: {
+      uint64  numTuples = 10000000ul;
+      mutable uint64 i = 0ul;
+      while (i &lt; numTuples) {
+        rstring nextName = "Name" + (rstring)i;
+        submit({cnt = i, name = nextName}, rawData)
+        i++;
+      }
+      submit(Sys.WindowMarker, rawData);
+    }
+  config placement: partitionColocation("A");         
+}
+  
+// Buffer one million tuple into memory and blast
+// them through two thousand times.
+
+</dd>
+</dl>
+
+</div>
+
+<div class="section"><h2 class="title sectiontitle splhead-1">Summary</h2>
+
+<dl class="dl" compact="compact">
+ 
+  <dt class="dt dlterm">Ports</dt>
+
+  <dd class="dd">This operator has 2 or more input ports and 1 output port.</dd>
+
+ 
+ 
+  <dt class="dt dlterm">Windowing</dt>
+
+  <dd class="dd">This operator does not accept any windowing configurations.</dd>
+
+ 
+ 
+  <dt class="dt dlterm">Parameters</dt>
+
+  <dd class="dd">This operator supports 5 parameters.
+<p class="p"> Required: 
+<a class="xref" href="#spldoc_operator__parameter__measurementMode">measurementMode</a>
+
+</p>
+
+<p class="p"> Optional: 
+<a class="xref" href="#spldoc_operator__parameter__tupleCount">tupleCount</a>, <a class="xref" href="#spldoc_operator__parameter__punctCount">punctCount</a>, <a class="xref" href="#spldoc_operator__parameter__measurementIntervals">measurementIntervals</a>, <a class="xref" href="#spldoc_operator__parameter__includeHeaders">includeHeaders</a>
+
+</p>
+</dd>
+
+ 
+ 
+  <dt class="dt dlterm">Metrics</dt>
+
+  <dd class="dd">This operator does not report any metrics.</dd>
+
+ 
+</dl>
+</div>
+
+<div class="section"><h2 class="title sectiontitle splhead-1">Properties</h2>
+
+<dl class="dl" compact="compact">
+ 
+  <dt class="dt dlterm">Implementation</dt>
+
+  <dd class="dd">C++</dd>
+
+ 
+ 
+  <dt class="dt dlterm"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__context__providessinglethreadedexecutioncontext">Threading</a></dt>
+
+  <dd class="dd"><tt class="ph tt">Always</tt> - Operator always provides a single threaded execution context.</dd>
+
+ 
+</dl>
+
+</div>
+
+<div class="section">
+<p class="p splhead-1"><strong class="ph b"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__input_port_set">Input Ports</a></strong></p>
+<dl class="dl">
+  
+   <dt class="dt dlterm">Ports (0)</dt>
+
+   <dd class="dd">
+<p class="p">The EmbeddedTupleCounterStop operator needs a minimum of two input ports and can accept additional input ports.
+</p>
+
+<p class="p">The first input port should be connected to the operator that is being measured. Tuples (or punctuations) coming into this operator will be counted by the operator.
+</p>
+
+   <dl class="dl">
+    
+      <dt class="dt dlterm">Properties</dt>
+
+      <dd class="dd">   <ul class="sl simple">
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__input_port_set__optional">Optional</a>: false
+     </li>
+
+   </ul>
+
+   <ul class="sl simple">
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__input_port_set__controlport">ControlPort</a>: false
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__input_port_set__tuplemutationallowed">TupleMutationAllowed</a>: false
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__input_port_set__windowingmode">WindowingMode</a>: NonWindowed
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__input_port_set__windowpunctuationinputmode">WindowPunctuationInputMode</a>: Oblivious
+     </li>
+
+   </ul>
+
+      </dd>
+    
+   </dl>
+
+   <p class="p"/>
+   </dd>
+
+  
+  
+   <dt class="dt dlterm">Ports (1...)</dt>
+
+   <dd class="dd">
+
+<p class="p">The remaining input ports 2 to N  are to be used to accept a tuple from a stream output by the EmbeddedTupleCounterStart operator. These input ports must contain only one attribute.  The attribute must be of type rstring.
+</p>
+
+   <dl class="dl">
+    
+      <dt class="dt dlterm">Properties</dt>
+
+      <dd class="dd">   <ul class="sl simple">
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__input_port_set__controlport">ControlPort</a>: false
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__input_port_set__tuplemutationallowed">TupleMutationAllowed</a>: false
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__input_port_set__windowingmode">WindowingMode</a>: NonWindowed
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__input_port_set__windowpunctuationinputmode">WindowPunctuationInputMode</a>: Oblivious
+     </li>
+
+   </ul>
+
+      </dd>
+    
+   </dl>
+
+   <p class="p"/>
+
+   </dd>
+
+  
+</dl>
+
+</div>
+
+<div class="section">
+<p class="p splhead-1"><strong class="ph b"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__output_port_set">Output Ports</a></strong></p>
+<dl class="dl">
+  
+     <dt class="dt dlterm">Assignments</dt>
+
+     <dd class="dd">This operator requires that assignments made to output attributes cannot reference input stream attributes.</dd>
+
+  
+</dl>
+
+<dl class="dl">
+      <dt class="dt dlterm"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__context__customoutputfunctions">Output Functions</a></dt>
+
+    <dd class="dd">
+      <dl class="dl">
+      
+        <dt class="dt dlterm">OutputOperations</dt>
+
+        <dd class="dd">
+          <dl class="dl">
+            <dt class="dt dlterm"/>
+<dd class="dd"/>
+
+            
+              <dt class="dt dlterm">
+                <tt class="ph tt">   &lt;any T&gt; T Any(T v)</tt>              </dt>
+
+            <dd class="dd">
+
+<p class="p">Return the argument unchanged
+</p>
+              <p class="p"/>
+
+            </dd>
+
+                        
+              <dt class="dt dlterm">
+                <tt class="ph tt">   rstring Any(rstring v, rstring description)</tt>              </dt>
+
+            <dd class="dd">
+
+<p class="p">Return the argument unchanged.  Include a custom header if includeHeaders parameter is true.
+</p>
+              <p class="p"/>
+
+            </dd>
+
+                        
+              <dt class="dt dlterm">
+                <tt class="ph tt">   &lt;any T&gt; T Duration()</tt>              </dt>
+
+            <dd class="dd">
+
+<p class="p">Return the duration (seconds) of the interval.
+</p>
+              <p class="p"/>
+
+            </dd>
+
+                        
+              <dt class="dt dlterm">
+                <tt class="ph tt">   rstring  Duration(rstring description)</tt>              </dt>
+
+            <dd class="dd">
+
+<p class="p">Return the duration (seconds) of the interval.   Include a custom header if includeHeaders parameter is true.
+</p>
+              <p class="p"/>
+
+            </dd>
+
+                        
+              <dt class="dt dlterm">
+                <tt class="ph tt">   &lt;any T&gt; T Count()</tt>              </dt>
+
+            <dd class="dd">
+
+<p class="p">Return the tuple count of the interval.
+</p>
+              <p class="p"/>
+
+            </dd>
+
+                        
+              <dt class="dt dlterm">
+                <tt class="ph tt">   rstring  Count(rstring description)</tt>              </dt>
+
+            <dd class="dd">
+
+<p class="p">Return the tuple count of the interval. Include a custom header if includeHeaders parameter is true.
+</p>
+              <p class="p"/>
+
+            </dd>
+
+                        
+              <dt class="dt dlterm">
+                <tt class="ph tt">   &lt;any T&gt; T Rate()</tt>              </dt>
+
+            <dd class="dd">
+
+<p class="p">Return the tuple rate (tuples per second)
+</p>
+              <p class="p"/>
+
+            </dd>
+
+                        
+              <dt class="dt dlterm">
+                <tt class="ph tt">   rstring  Rate(rstring description)</tt>              </dt>
+
+            <dd class="dd">
+
+<p class="p">Return the tuple rate (tuples per second) Include a custom header if includeHeaders parameter is true. 
+</p>
+              <p class="p"/>
+
+            </dd>
+
+                        
+              <dt class="dt dlterm">
+                <tt class="ph tt">   &lt;any T&gt; T Interval()</tt>              </dt>
+
+            <dd class="dd">
+
+<p class="p">Return the current interval (a counter).
+</p>
+              <p class="p"/>
+
+            </dd>
+
+                        
+              <dt class="dt dlterm">
+                <tt class="ph tt">   rstring  Interval(rstring description)</tt>              </dt>
+
+            <dd class="dd">
+
+<p class="p">Return the current interval (a counter).i Include a custom header if includeHeaders parameter is true. 
+</p>
+              <p class="p"/>
+
+            </dd>
+
+                      </dl>
+        </dd>
+
+      
+      </dl>
+
+    </dd>
+
+  </dl>
+
+ <dl class="dl">
+  
+   <dt class="dt dlterm">Ports (0)</dt>
+
+   <dd class="dd">
+
+<p class="p">The <tt class="ph tt">EmbededTupleCounterStop</tt> operator has one required output port.  
+</p>
+
+<p class="p">The output port should contain measurement result data using the output functions supplied within the operator.
+</p>
+
+    <p class="p"/>
+
+    <dl class="dl">
+     
+      <dt class="dt dlterm">Properties</dt>
+
+      <dd class="dd">   <ul class="sl simple">
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__output_port_set__optional">Optional</a>: false
+     </li>
+
+   </ul>
+
+   <ul class="sl simple">
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__output_port_set__tuplemutationallowed">TupleMutationAllowed</a>: false
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__output_port_set__windowpunctuationoutputmode">WindowPunctuationOutputMode</a>: Free
+     </li>
+
+   </ul>
+
+</dd>
+     
+    </dl>
+
+    <p class="p"/>
+
+   </dd>
+
+  
+</dl>
+
+</div>
+
+<div class="section">
+<p class="p splhead-1"><strong class="ph b"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters">Parameters</a></strong></p>
+This operator supports 5 parameters.<dl class="dl">
+  
+     <dt class="dt dlterm"><a name="spldoc_operator__parameter__measurementMode"><!-- --></a><tt class="ph tt">measurementMode</tt></dt>
+
+     <dd class="dd">
+<p class="p">Indicates what should trigger the start of a new measurement interval. Valid values are <tt class="ph tt">TupleCount</tt> and <tt class="ph tt">PunctCount</tt>.
+</p>
+
+<div class="p">
+<ul class="ul">
+<li class="li"> <tt class="ph tt">TupleCount</tt>: Indicates that a certain number of tuples</li>
+
+</ul>
+being passed through the last input port will indicate a new measurement interval.  If this value is specified, then the tupleCount parameter must also be specified.
+<ul class="ul">
+<li class="li"> <tt class="ph tt">PunctCount</tt>: Indicates that a certain number of puncuations</li>
+
+</ul>
+being passed therough the last input port  will indicate a new measurement interval.
+</div>
+
+  <dl class="dl">
+    
+     <dt class="dt dlterm">Properties</dt>
+
+     <dd class="dd">   <ul class="sl simple">
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__type">Type</a>: Modes
+ (<tt class="ph tt">TupleCount, PunctCount</tt>)     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__cardinality">Cardinality</a>: 1
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__optional">Optional</a>: false
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__expressionmode">ExpressionMode</a>: CustomLiteral
+     </li>
+
+   </ul>
+
+     <p class="p"/>
+     </dd>
+
+    
+  </dl>
+
+     </dd>
+
+  
+  
+     <dt class="dt dlterm"><a name="spldoc_operator__parameter__tupleCount"><!-- --></a><tt class="ph tt">tupleCount</tt></dt>
+
+     <dd class="dd">
+<p class="p">Used in conjunction with the TupleCount measurement mode.  This parameter value will indicate the number of tuples that need to be passed through the last input ports to indicate a new measurement interval.  This parameter is required if the TupleCount measurementMode parameter is specified.
+</p>
+
+  <dl class="dl">
+    
+     <dt class="dt dlterm">Properties</dt>
+
+     <dd class="dd">   <ul class="sl simple">
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__type">Type</a>: uint64
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__cardinality">Cardinality</a>: 1
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__optional">Optional</a>: true
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__expressionmode">ExpressionMode</a>: AttributeFree
+     </li>
+
+   </ul>
+
+     <p class="p"/>
+     </dd>
+
+    
+  </dl>
+
+     </dd>
+
+  
+  
+     <dt class="dt dlterm"><a name="spldoc_operator__parameter__punctCount"><!-- --></a><tt class="ph tt">punctCount</tt></dt>
+
+     <dd class="dd">
+<p class="p">Used in conjunction with the PunctCount measurement mode. This parameter value will indicate the number of punctuations that need to be passed through the last input port to indicate a new measurement interval.  This value defaults to one if not specified.
+</p>
+
+  <dl class="dl">
+    
+     <dt class="dt dlterm">Properties</dt>
+
+     <dd class="dd">   <ul class="sl simple">
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__type">Type</a>: uint64
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__cardinality">Cardinality</a>: 1
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__optional">Optional</a>: true
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__expressionmode">ExpressionMode</a>: AttributeFree
+     </li>
+
+   </ul>
+
+     <p class="p"/>
+     </dd>
+
+    
+  </dl>
+
+     </dd>
+
+  
+  
+     <dt class="dt dlterm"><a name="spldoc_operator__parameter__measurementIntervals"><!-- --></a><tt class="ph tt">measurementIntervals</tt></dt>
+
+     <dd class="dd">
+<p class="p">Number of measurement intervals.  This value will default to one.
+</p>
+
+  <dl class="dl">
+    
+     <dt class="dt dlterm">Properties</dt>
+
+     <dd class="dd">   <ul class="sl simple">
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__type">Type</a>: uint64
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__cardinality">Cardinality</a>: 1
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__optional">Optional</a>: true
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__expressionmode">ExpressionMode</a>: AttributeFree
+     </li>
+
+   </ul>
+
+     <p class="p"/>
+     </dd>
+
+    
+  </dl>
+
+     </dd>
+
+  
+  
+     <dt class="dt dlterm"><a name="spldoc_operator__parameter__includeHeaders"><!-- --></a><tt class="ph tt">includeHeaders</tt></dt>
+
+     <dd class="dd">
+<p class="p">If includeHeaders is set to true, attribute descriptions will be placed in an extra tuple prior to the first tuple being output. All attributes in the output stream must be of type rstring if includeHeaders is true.  This value will default to false.
+</p>
+
+  <dl class="dl">
+    
+     <dt class="dt dlterm">Properties</dt>
+
+     <dd class="dd">   <ul class="sl simple">
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__type">Type</a>: boolean
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__cardinality">Cardinality</a>: 1
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__optional">Optional</a>: true
+     </li>
+
+     <li class="sli"><a class="xref" href="../references/OperatorModel.html#spldoc_reference_operator_model__parameters__parameter__expressionmode">ExpressionMode</a>: AttributeFree
+     </li>
+
+   </ul>
+
+     <p class="p"/>
+     </dd>
+
+    
+  </dl>
+
+     </dd>
+
+  
+</dl>
+
+</div>
+
+</div>
+
+
+</body>
+</html>

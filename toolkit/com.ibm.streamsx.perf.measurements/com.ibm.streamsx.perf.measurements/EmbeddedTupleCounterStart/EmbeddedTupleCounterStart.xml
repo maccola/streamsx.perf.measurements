@@ -1,0 +1,155 @@
+<?xml version="1.0" ?>
+<!-- Copyright (C) 2015, International Business Machines Corporation  -->
+<!-- All Rights Reserved                                              -->
+<!--                                                                  -->
+<operatorModel
+  xmlns="http://www.ibm.com/xmlns/prod/streams/spl/operator" 
+  xmlns:cmn="http://www.ibm.com/xmlns/prod/streams/spl/common" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.ibm.com/xmlns/prod/streams/spl/operator operatorModel.xsd">
+  <cppOperatorModel>
+    <context>
+      <description>
+The `EmbeddedTupleCounterStart` operator that, used in conjunction
+with the `EmbeddedTupleCounterStop` operator, can allow an
+application to detect how many tuples are flowing through
+an operator (or a set of operators).
+
+It is important for users of this operator to understand the
+concepts of Processing Elements (PEs) and fusion.  When measuring
+the performance of an operator, the EmbeddedTupleCounterStart operator,
+the EmbeddedTupleCounterStop operator, and the operator being measured
+should all be placed in the same PE.  Often the `Blast` operator
+will be used upstream from the EmbeddedTupleCounterStart operator as 
+well.  In this case, the Blast operator should be placed in the
+same PE as well.
+
++ Examples
+
+See example in EmbeddedTupleCounterStop documentation.
+      </description>
+      <customLiterals>
+        <enumeration>
+          <name>Modes</name>
+          <value>TupleCount</value>
+          <value>PunctCount</value>
+        </enumeration>
+      </customLiterals>
+      <providesSingleThreadedContext>Always</providesSingleThreadedContext>
+    </context>  
+    <parameters>
+      <allowAny>false</allowAny>
+      <parameter>
+        <name>measurementMode</name>
+        <description>
+Indicates what should trigger the start of a new measurement interval.
+Valid values are `TupleCount` and `PunctCount`.
+
+* `TupleCount`: Indicates that a certain number of tuples 
+being passed through the
+input port will indicate a new measurement interval.  If this
+value is specified, then the tupleCount parameter must also be specified.
+* `PunctCount`: Indicates that a certain number of puncuations
+being passed therough the input ports will indicate a new
+measurement interval.
+        </description>
+        <optional>false</optional>
+        <rewriteAllowed>false</rewriteAllowed>
+        <expressionMode>CustomLiteral</expressionMode>
+        <type>Modes</type>
+        <cardinality>1</cardinality>
+      </parameter>
+      <parameter>
+        <name>tupleCount</name>
+        <description>
+Used in conjunction with the TupleCount measurement mode.  This
+parameter value will indicate the number of tuples that need
+to be passed through the input port to indicate a new measurement
+interval.  This parameter is required if the TupleCount
+measurementMode parameter is specified.
+        </description>
+        <optional>true</optional>
+        <rewriteAllowed>true</rewriteAllowed>
+        <expressionMode>AttributeFree</expressionMode>
+        <type>uint64</type>
+        <cardinality>1</cardinality>
+      </parameter>
+      <parameter>
+        <name>punctCount</name>
+        <description>
+Used in conjunction with the PunctCount measurement mode.
+This parameter value will indicate the number of punctuations
+that need to be passed through the input port to indicate a
+new measurement interval.  This value defaults to one if 
+not specified.
+        </description>
+        <optional>true</optional>
+        <rewriteAllowed>true</rewriteAllowed>
+        <expressionMode>AttributeFree</expressionMode>
+        <type>uint64</type>
+        <cardinality>1</cardinality>
+      </parameter>
+      <parameter>
+        <name>measurementIntervals</name>
+        <description>
+        Number of measurement intervals.  This value will
+        default to one.
+        </description>
+        <optional>true</optional>
+        <rewriteAllowed>true</rewriteAllowed>
+        <expressionMode>AttributeFree</expressionMode>
+        <type>uint64</type>
+        <cardinality>1</cardinality>
+      </parameter>
+    </parameters>
+    <inputPorts>
+      <inputPortSet>
+        <description>
+The EmbeddedTupleCounterStart operator has one required input port.
+
+All tuples and puncutations coming into the input port will be 
+preserved and passed out to the second output port.
+        </description>
+        <tupleMutationAllowed>false</tupleMutationAllowed>
+        <windowingMode>NonWindowed</windowingMode>
+        <windowPunctuationInputMode>Oblivious</windowPunctuationInputMode>
+        <cardinality>1</cardinality>
+        <optional>false</optional>
+      </inputPortSet>      
+    </inputPorts>
+    <outputPorts>
+      <outputPortSet>
+        <description>
+The `EmbeddedTupleCounterStart` has two required output ports.
+
+The first output port will be used only to pass along the
+timestamp of the measurement intervals.  The stream
+schema used with this output port must only have one attribute
+and it must be of type timestamp.
+        </description>
+        <expressionMode>Nonexistent</expressionMode> 
+        <autoAssignment>false</autoAssignment>
+        <completeAssignment>false</completeAssignment>
+        <rewriteAllowed>false</rewriteAllowed>
+        <windowPunctuationOutputMode>Free</windowPunctuationOutputMode>
+        <tupleMutationAllowed>false</tupleMutationAllowed>
+        <cardinality>1</cardinality>
+        <optional>false</optional>
+      </outputPortSet>          
+      <outputPortSet>
+        <description>
+The second output port will be used to pass along the tuples
+and punctuations from the input port.  The tuples will be preserved.
+        </description>
+        <expressionMode>Nonexistent</expressionMode> 
+        <autoAssignment>false</autoAssignment>
+        <completeAssignment>false</completeAssignment>
+        <rewriteAllowed>false</rewriteAllowed>
+        <windowPunctuationOutputMode>Preserving</windowPunctuationOutputMode>
+        <tupleMutationAllowed>false</tupleMutationAllowed>
+        <cardinality>1</cardinality>
+        <optional>false</optional>
+      </outputPortSet>          
+    </outputPorts>
+  </cppOperatorModel>
+</operatorModel>
